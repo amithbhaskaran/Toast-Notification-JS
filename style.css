@@ -11,3 +11,40 @@ body {
   font-family: Poppins;
   font-size: 16px;
 }
+
+.toast-container {
+  max-width: 250px;
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.toast-container[data-position^="top-"] { top: 0;} /* ^ = starts with top- */
+.toast-container[data-position^="bottom-"] { bottom: 0; }
+.toast-container[data-position$="-left"] { left: 0; } /* $ = ends with -left */
+
+.toast-container[data-position$="-center"] {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.toast-container[data-position$="-right"] { right: 0; }
+
+.toast {
+  padding: 1rem;
+  background-color: #fff;
+  border: 1px solid #333;
+  border-radius: .5em;
+  position: relative;
+  cursor: pointer;
+}
+
+.toast::after {
+  content: '\00D7';
+  position: absolute;
+  top: 0;
+  right: 5px;
+  cursor: pointer;
+}
+
