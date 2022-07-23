@@ -3,12 +3,22 @@ const DEFAULT_OPTIONS = {
   position: 'top-right',
   onClose: () => {},
   canClose: true,
+  showProgress: true,
+  pauseOnHover: true,
 }
 
 export default class Toast {
   #toastElem
-  #autoCloseTimeout
+  #autoCloseInterval
   #removeBinded
+  #autoClose = 0;
+  #progressInterval
+  #timeVisible = 0;
+  #isPaused = false
+  #pause
+  #unpause
+  #visibilityChange
+  #shouldUnPause
 
   constructor(options) {
     this.#toastElem = document.createElement('div');
@@ -17,6 +27,11 @@ export default class Toast {
       this.#toastElem.classList.add('show');
     });
     this.#removeBinded = this.remove.bind(this);
+    this.#pause = () => this.#isPaused = true;
+    this.#unpause = () => this.#isPaused = false;
+    this.#visibilityChange = () => {
+      this.#shouldUnPause = document.visibilityState === 'visible';
+    }
     this.update({...DEFAULT_OPTIONS, ...options});
   }
 
@@ -34,21 +49,73 @@ export default class Toast {
   }
 
   set autoClose(time) {
+    this.#autoClose = time;
+    this.#timeVisible = 0;
     if(time === false) return;
-    if(this.#autoCloseTimeout != null) clearTimeout(this.#autoCloseTimeout);    
-    this.#autoCloseTimeout = setTimeout(() => {
-      this.remove();
-    }, time)
+    let lastTime;
+    const func = (time) => {
+      if(this.#shouldUnPause) {
+        lastTime = null;
+        this.#shouldUnPause = false;
+      }
+      if(lastTime == null) {
+        lastTime = time;
+        this.#autoCloseInterval = requestAnimationFrame(func);
+        return;
+      }
+
+      if(!this.#isPaused){
+        this.#timeVisible += time - lastTime;
+        if(this.#timeVisible >= this.#autoClose) {
+          this.remove();
+          return;
+        }
+      }
+      lastTime = time;
+      this.#autoCloseInterval = requestAnimationFrame(func);
+    }
+    this.#autoCloseInterval = requestAnimationFrame(func);
   }
 
   set canClose(canCloseValue) {
-
     this.#toastElem.classList.toggle('can-close', canCloseValue);
-
     if(canCloseValue === true) {
       this.#toastElem.addEventListener('click', this.#removeBinded);
     } else {
       this.#toastElem.removeEventListener('click', this.#removeBinded);
+    }
+  }
+
+  set showProgress(value) {
+    this.#toastElem.classList.toggle('progress', value);
+    this.#toastElem.style.setProperty('--progress', 1);
+    if(value) {
+      const func = () => {
+        if(!this.#isPaused) {
+          this.#toastElem.style.setProperty('--progress', 1 - this.#timeVisible / this.#autoClose);
+        };
+        this.#progressInterval = requestAnimationFrame(func);
+      }
+      this.#progressInterval = requestAnimationFrame(func);
+    }
+  }
+
+  set pauseOnHover(value) {
+    if(value) {
+      this.#toastElem.addEventListener('mouseover', this.#pause);
+      this.#toastElem.addEventListener('mouseleave', this.#unpause);
+    } else {
+      this.#toastElem.removeEventListener('mouseover', this.#pause);
+      this.#toastElem.removeEventListener('mouseleave', this.#unpause);
+    }
+  }
+
+  set pauseOnFocusLoss(value) {
+    console.log('Here');
+    if(value) {
+      document.addEventListener('visibilitychange', this.#visibilityChange);
+    } else {
+      document.removeEventListener('visibilitychange', this.#visibilityChange);
     }
   }
 
@@ -59,11 +126,18 @@ export default class Toast {
   }
 
   remove() {
+    cancelAnimationFrame(this.#autoCloseInterval);
+    cancelAnimationFrame(this.#progressInterval);
     const container = this.#toastElem.parentElement;
-    this.#toastElem.remove();
+    this.#toastElem.classList.remove('show');
+    this.#toastElem.classList.remove('show');
+    this.#toastElem.addEventListener('transitionend', () => {
+      this.#toastElem.remove();
+      if(container.hasChildNodes()) return;
+      container.remove();
+    });
     this.onClose();
-    if(container.hasChildNodes()) return;
-    container.remove();
+
   }
 
 }

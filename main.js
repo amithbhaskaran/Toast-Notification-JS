@@ -1,20 +1,17 @@
 import Toast from "./Toast.js";
 
-let count = 1;
 document.querySelector('button').addEventListener('click', (e) => {
   let toast = new Toast({
-    position: 'top-right',
+    position: 'top-center',
     // text: 'Welcome New Toast..!',
     text: 'Toast' + ': ' + count,
-    autoClose: 1000,
-    canClose: true,
+    // autoClose: 1000,
+    // canClose: true,
+    showProgress: true,
+    pauseOnHover: true,
+    pauseOnFocusLoss: true,
   });
-  count++;
 })
-
-setTimeout(() => {
-  console.log(count);
-}, 4000);
 
 // setTimeout(() => {
 //   toast.update({
